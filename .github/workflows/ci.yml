@@ -1,0 +1,49 @@
+name: "CI :: Default"
+
+on:
+  schedule:
+    - cron: "0 1 * * *"
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: "**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: "General :: Setup JDK 11"
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: 11
+
+      - name: "General :: Cache Maven Packages"
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: "Producer :: Build"
+        run: ./mvnw clean install -B -ntp -f streaming-dmn-kafka-producer/pom.xml
+
+      - name: "Consumer :: Build"
+        run: ./mvnw clean install -B -ntp -f streaming-dmn-kafka-consumer/pom.xml
+
+      - name: "Producer :: Upload"
+        uses: actions/upload-artifact@v2
+        with:
+          name: streaming-dmn-kafka-producer
+          path: "streaming-dmn-kafka-producer/target/quarkus-app/quarkus-run.jar"
+
+      - name: "Consumer :: Upload"
+        uses: actions/upload-artifact@v2
+        with:
+          name: streaming-dmn-kafka-consumer
+          path: "streaming-dmn-kafka-consumer/target/quarkus-app/quarkus-run.jar"
